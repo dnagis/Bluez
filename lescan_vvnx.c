@@ -42,10 +42,57 @@
 #include "lib/hci_lib.h"
 
 static volatile int signal_received = 0;
+#define EIR_FLAGS                   0x01  /* flags */
+#define EIR_UUID16_SOME             0x02  /* 16-bit UUID, more available */
+#define EIR_UUID16_ALL              0x03  /* 16-bit UUID, all listed */
+#define EIR_UUID32_SOME             0x04  /* 32-bit UUID, more available */
+#define EIR_UUID32_ALL              0x05  /* 32-bit UUID, all listed */
+#define EIR_UUID128_SOME            0x06  /* 128-bit UUID, more available */
+#define EIR_UUID128_ALL             0x07  /* 128-bit UUID, all listed */
+#define EIR_NAME_SHORT              0x08  /* shortened local name */
+#define EIR_NAME_COMPLETE           0x09  /* complete local name */
+#define EIR_TX_POWER                0x0A  /* transmit power level */
+#define EIR_DEVICE_ID               0x10  /* device ID */
 
 void sigint_handler(int sig)
 {
 	signal_received = sig;
+}
+
+static void eir_parse_name(uint8_t *eir, size_t eir_len,
+						char *buf, size_t buf_len)
+{
+	size_t offset;
+
+	offset = 0;
+	while (offset < eir_len) {
+		uint8_t field_len = eir[0];
+		size_t name_len;
+
+		/* Check for the end of EIR */
+		if (field_len == 0)
+			break;
+
+		if (offset + field_len > eir_len)
+			goto failed;
+
+		switch (eir[1]) {
+		case EIR_NAME_SHORT:
+		case EIR_NAME_COMPLETE:
+			name_len = field_len - 1;
+			if (name_len > buf_len)
+				goto failed;
+
+			memcpy(buf, &eir[2], name_len);
+			return;
+		}
+
+		offset += field_len + 1;
+		eir += field_len + 1;
+	}
+
+failed:
+	snprintf(buf, buf_len, "(unknown)");
 }
 
 void run_lescan(int dd)
@@ -81,8 +128,8 @@ void run_lescan(int dd)
 	sigaction(SIGINT, &sa, NULL);
 	
 	while (1) {
-		evt_le_meta_event *meta;
-		le_advertising_info *info;
+		evt_le_meta_event *meta; //lib/hci.h
+		le_advertising_info *info; //lib/hci.h
 		char addr[18];
 		
 		while ((len = read(dd, buf, sizeof(buf))) < 0) {
@@ -100,7 +147,16 @@ void run_lescan(int dd)
 
 		meta = (void *) ptr;
 	    
-	    
+	    if (meta->subevent != 0x02) //je suppose: #define EVT_LE_ADVERTISING_REPORT	0x02 --> lib/hci.h
+			goto done;
+			
+		info = (le_advertising_info *) (meta->data + 1);
+		char name[30];
+		memset(name, 0, sizeof(name));
+		ba2str(&info->bdaddr, addr);
+		eir_parse_name(info->data, info->length, name, sizeof(name) - 1);
+		printf("%s %s\n", addr, name);
+		
 	    
 	sleep(1);
 	}
