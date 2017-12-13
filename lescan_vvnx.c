@@ -175,7 +175,7 @@ int main()
 	//LE Set Scan Parameters Command. Core Specs p 1261. Vol. 2 Part E. HCI Func Specs
 	uint8_t own_type = 0x00; // lib/hci.h (public 0x00 random 0x01)
 	uint8_t scan_type = 0x01; //0:Passive 1:Active
-	uint8_t filter_policy = 0x00; //p 1267. 0: tout accepter, 1:WL only, 2:Neg-Filter les directed adv non ciblés vers nous, 3:filtre 1+2 (?)
+	uint8_t filter_policy = 0x01; //p 1267. 0: tout accepter, 1:WL only, 2:Neg-Filter les directed adv non ciblés vers nous, 3:filtre 1+2 (?)
 	uint16_t interval = htobs(0x0010); //10=default, 10ms
 	uint16_t window = htobs(0x0010); //durée du scan. doit être <= à interval. 10=default
 	
