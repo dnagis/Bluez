@@ -1,19 +1,11 @@
 /** gcc -o lescan lescan_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.47 -lbluetooth
  * 
- * scp lescan_vvnx.c ks:/home/bluez_esp32/ble_pure
+ * sur github, repo ble_pure
+ * 
+ * de l'autre côté, esp32, "esp32_ble_pure" sur github, et sur le NUC: esp32_vince/ble_pure
  * 
  * Basé sur tools/hcitool.c -- li 2504 surtout
- * Goals: 
- * -Avoir une boucle qui scan ble, pour récup de l'AdvData venant des esp32
- * -Whitelisting
- * -Directed Advertising Packets
- * -Scan Response -> principe?? 
  * 
- * hci_open_dev()
- * cmd_lescan()
- * hci_le_set_scan_parameters() hci_lib.h et hci.c
- * hci_le_set_scan_enable() hci_lib.h et hci.c
- * print_advertising_devices()
  * 
  * Attention si l'appli plante on ne passe pas par hci_le_set_scan_enable(dd, 0x00, filter_dup, 10000); 
  * 	et donc le enable suivant ne marchera pas!
@@ -60,54 +52,26 @@ void sigint_handler(int sig)
 	signal_received = sig;
 }
 
-
-//eir_parse_name(info->data, info->length, name, sizeof(name) - 1);
-static void parse_vvnx(uint8_t *eir, size_t eir_len, char *buf, size_t buf_len)
+/**Parsage de ce qu'il y a dans la le_advertising_info, basé sur eir_parse_name() de hcitool
+*je n'ai pas besoin de me prendre la tête avec le format défini par les core specs pour la data (31 bytes avec des
+*contraintes de format: bytes de longueur etc...
+* 
+* 
+* 
+**/
+static float recup_temp(uint8_t *eir)
 {
-uint8_t field_len = 3;
-size_t name_len = 3;
-//name_len = field_len - 1;
-memcpy(buf, &eir[3], 1);
-//snprintf(buf, buf_len, "vincent");
-
+uint8_t intPart;
+uint8_t decPart;
+memcpy(&intPart, &eir[0], 1);
+memcpy(&decPart, &eir[1], 1);
+float temperature = intPart + (0.1 * decPart);
+//fprintf(stderr, "intpart = %i, decPart = %i, temperature = %.1f \n", intPart, decPart, temperature);
+return temperature;
 }
 
 
-//eir_parse_name(info->data, info->length, name, sizeof(name) - 1);
-static void eir_parse_name(uint8_t *eir, size_t eir_len, char *buf, size_t buf_len)
-{
-	size_t offset;
 
-	offset = 0;
-	while (offset < eir_len) {
-		uint8_t field_len = eir[0];
-		size_t name_len;
-
-		/* Check for the end of EIR */
-		if (field_len == 0)
-			break;
-
-		if (offset + field_len > eir_len)
-			goto failed;
-
-		switch (eir[1]) {
-		case EIR_NAME_SHORT:
-		case EIR_NAME_COMPLETE:
-			name_len = field_len - 1;
-			if (name_len > buf_len)
-				goto failed;
-
-			memcpy(buf, &eir[2], name_len);
-			return;
-		}
-
-		offset += field_len + 1;
-		eir += field_len + 1;
-	}
-
-failed:
-	snprintf(buf, buf_len, "(unknown)");
-}
 
 void run_lescan(int dd)
 {
@@ -161,20 +125,20 @@ void run_lescan(int dd)
 
 		meta = (void *) ptr;
 	    
-	    if (meta->subevent != 0x02) //je suppose: #define EVT_LE_ADVERTISING_REPORT	0x02 --> lib/hci.h
-			goto done;
+	    if (meta->subevent != 0x02) //#define EVT_LE_ADVERTISING_REPORT	0x02 --> lib/hci.h. Core Specs p1193 LE Advertising Report Event
+			goto done; //Attention ça fait sortir de la boucle, y aura pas de deuxième chance!
 			
 		info = (le_advertising_info *) (meta->data + 1);
-		char name[30];
-		char name_vvnx[30];
-		memset(name, 0, sizeof(name));
-		memset(name_vvnx, 0, sizeof(name_vvnx));
-		ba2str(&info->bdaddr, addr);
-		eir_parse_name(info->data, info->length, name, sizeof(name) - 1);
-		printf("%s %i %s\n", addr, info->length, name);
-		
-		parse_vvnx(info->data, info->length, name_vvnx, sizeof(name_vvnx) - 1);
-		printf("retour de parse_vvnx: %x\n", name_vvnx[0]);		
+			
+		if (info->evt_type == 0x04) {			//Filtrer par Event Type (SCAN_RSP ou ADV_IND...). btmon... Core Specs p. 1193 LE Advertising Report Event
+			float temp;
+			memset(&temp, 0, sizeof(temp));
+			ba2str(&info->bdaddr, addr);		
+			temp = recup_temp(info->data);
+			printf("retour de parse_vvnx: %.1f\n", temp);	
+
+		}
+
 	    
 	sleep(1);
 	}
