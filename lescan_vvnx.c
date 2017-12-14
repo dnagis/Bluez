@@ -15,7 +15,8 @@
  * hci_le_set_scan_enable() hci_lib.h et hci.c
  * print_advertising_devices()
  * 
- * 
+ * Attention si l'appli plante on ne passe pas par hci_le_set_scan_enable(dd, 0x00, filter_dup, 10000); 
+ * 	et donc le enable suivant ne marchera pas!
  * 
  * hcitool dev --> Devices: hci0	00:C2:C6:D1:E8:44
  * 
@@ -59,8 +60,21 @@ void sigint_handler(int sig)
 	signal_received = sig;
 }
 
-static void eir_parse_name(uint8_t *eir, size_t eir_len,
-						char *buf, size_t buf_len)
+
+//eir_parse_name(info->data, info->length, name, sizeof(name) - 1);
+static void parse_vvnx(uint8_t *eir, size_t eir_len, char *buf, size_t buf_len)
+{
+uint8_t field_len = 3;
+size_t name_len = 3;
+//name_len = field_len - 1;
+memcpy(buf, &eir[3], 1);
+//snprintf(buf, buf_len, "vincent");
+
+}
+
+
+//eir_parse_name(info->data, info->length, name, sizeof(name) - 1);
+static void eir_parse_name(uint8_t *eir, size_t eir_len, char *buf, size_t buf_len)
 {
 	size_t offset;
 
@@ -152,11 +166,15 @@ void run_lescan(int dd)
 			
 		info = (le_advertising_info *) (meta->data + 1);
 		char name[30];
+		char name_vvnx[30];
 		memset(name, 0, sizeof(name));
+		memset(name_vvnx, 0, sizeof(name_vvnx));
 		ba2str(&info->bdaddr, addr);
 		eir_parse_name(info->data, info->length, name, sizeof(name) - 1);
-		printf("%s %s\n", addr, name);
+		printf("%s %i %s\n", addr, info->length, name);
 		
+		parse_vvnx(info->data, info->length, name_vvnx, sizeof(name_vvnx) - 1);
+		printf("retour de parse_vvnx: %x\n", name_vvnx[0]);		
 	    
 	sleep(1);
 	}
