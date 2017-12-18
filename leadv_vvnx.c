@@ -7,7 +7,7 @@
  * 		Correspond à:
  * 			Core specs > Core Sys Pkg [BR/EDR Ctrller Vol] Spec Vol. 2 > Part E - HCI func specs > 7-HCI cmds + evts > LE ctrller commands > p 1259 LE Set Advertising Enable Command
  * 
- * 
+ * btmon et hcitool lescan sur un autre bluez (un zero en ssh par exemple...)
  * 
  * **/
 
@@ -32,8 +32,8 @@ int vvnx_hci_le_set_adv_data(int dd)
 	struct hci_request rq;
 	le_set_advertising_data_cp adv_cp;
 	uint8_t status, taille;
-	taille = 7;
-	uint8_t adv_data_vvnx[31] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+	taille = 8;
+	uint8_t adv_data_vvnx[31] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x0e};
 	
 	memset(&adv_cp, 0, sizeof(adv_cp));
 	adv_cp.length = taille;
@@ -67,9 +67,7 @@ int main()
 	int err, dd;
 		
 	dd = hci_open_dev(0);
-	
-	
-	
+		
 	
 	/**Ma custom Set Adv Data (because bluez définit les cmds params mais ne fournit pas de fonction)**/
 	err = vvnx_hci_le_set_adv_data(dd);
@@ -77,10 +75,9 @@ int main()
 	
 	/**Adv Enable**/
 	err = hci_le_set_advertise_enable(dd, 0x01, 10000); //core specs p 1259
-	fprintf(stderr, "Retour de set_advertise_enable 0x01 (enable) = %i\n", err);
+	fprintf(stderr, "Retour de set_advertise_enable 0x01 (enable) = %i\n", err); //tu auras du -1 si l'adv est déjà enabled, mais les AdvData seront updatées anyway
 	
-	
-	sleep(5);
+
 	
 	hci_close_dev(dd);
 	
