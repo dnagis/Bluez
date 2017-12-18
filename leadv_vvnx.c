@@ -19,12 +19,64 @@
 #include "lib/hci_lib.h"
 
 
+/**hélas la commande n'existe pas dans la librairie bluez, je suis donc obligé de faire ma request à la mano
+ * Core Sys Pkg [BR/EDR Ctrller Vol] Spec Vol. 2 > E-HCI func specs > 7-HCI cmds&evts > LE ctrlr cmds > p 1256 LE Set Advertising Data Command
+ * 	Pour faire la request cf lib/hci.c (par exemple li.2978 hci_le_set_advertise_enable)
+ * 
+ * cp = Command Parameter
+ * rp = Return Parameter
+ * 
+ * **/
+int vvnx_hci_le_set_adv_data(int dd)
+{
+	struct hci_request rq;
+	le_set_advertising_data_cp adv_cp;
+	uint8_t status, taille;
+	taille = 7;
+	
+	memset(&adv_cp, 0, sizeof(adv_cp));
+	adv_cp.length = taille;
+	adv_cp.data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+	
+	memset(&rq, 0, sizeof(rq));
+	rq.ogf = OGF_LE_CTL;
+	rq.ocf = OCF_LE_SET_ADVERTISING_DATA;
+	rq.cparam = &adv_cp;
+	rq.clen = LE_SET_ADVERTISING_DATA_CP_SIZE;
+	rq.rparam = &status;
+	rq.rlen = 1;
+	
+	if (hci_send_req(dd, &rq, 10000) < 0) //dernier argument = timeout
+		return -1;
+		
+	if (status) {
+	errno = EIO;
+	return -1;
+	}
+
+	return 0;
+	
+}
+
+
+
+
 int main()
 {
 	int dd;
-	
+		
 	dd = hci_open_dev(0);
+	
+	
+	
+	
+	/**Ma custom Set Adv Data (because bluez définit les cmds params mais ne fournit pas de fonction)**/
+	err = vvnx_hci_le_set_adv_data(dd);
+	fprintf(stderr, "Retour de set_adv_data = %i\n", err);
+	
+	
 	sleep(5);
+	
 	hci_close_dev(dd);
 	
 	
