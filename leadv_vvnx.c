@@ -84,8 +84,8 @@ int vvnx_hci_le_set_adv_parameters(int dd)
 	param_cp.direct_bdaddr_type = 0x00; //Peer Address Type
 	//direct_bdaddr (bluez) - peer_address (core specs)
 	str2ba("00:00:00:00:00:00", &bdaddr); //adresse "any" ???
-	
-	
+	bacpy(&param_cp.direct_bdaddr, &bdaddr); 
+	param_cp.chan_map = 7; //00000111b - 1 octet - 00000111 to int --> 7	
 	param_cp.filter = 0x03; //0x03: whitelist only
 	
 	memset(&rq, 0, sizeof(rq));
@@ -100,7 +100,7 @@ int vvnx_hci_le_set_adv_parameters(int dd)
 		return -1;
 
 	if (status) {
-		fprintf(stderr, "set_adv_parameters -> On a du return parameter avec status =  0x%02x\n", status); //Vol.2 Part D Error codes p642
+		fprintf(stderr, "set_adv_parameters -> On a du return parameter avec status =  0x%02x\n", status); //Vol.2 Part D Error codes p643
 		return -1;
 	}	
 	
