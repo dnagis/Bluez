@@ -125,7 +125,7 @@ int main()
 	err = hci_le_set_advertise_enable(dd, 0x00, 10000); 
 	fprintf(stderr, "Retour de set_advertise_disable 0x00 (disable) = %i\n", err); 	
 	
-	/**Ma custom Set Adv Data définie plus haut**/
+	/**Ma custom Set Adv Data définie plus haut. Je pense pas qu'il soit nécessaire de disabler l'advertise pour que ça marche**/
 	err = vvnx_hci_le_set_adv_data(dd);
 	fprintf(stderr, "Retour de set_adv_data = %i\n", err);	
 	
