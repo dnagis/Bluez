@@ -77,16 +77,16 @@ int vvnx_hci_le_set_adv_parameters(int dd)
 	bdaddr_t bdaddr;
 	
 	memset(&param_cp, 0, sizeof(param_cp));
-	param_cp.min_interval = htobs(0x0800);
-	param_cp.max_interval = htobs(0x0800);
+	param_cp.min_interval = htobs(0x0020);
+	param_cp.max_interval = htobs(0x4000);
 	param_cp.advtype = 0x00;
 	param_cp.own_bdaddr_type = 0x00;
 	param_cp.direct_bdaddr_type = 0x00; //Peer Address Type
-	//direct_bdaddr (bluez) - peer_address (core specs)
-	str2ba("00:00:00:00:00:00", &bdaddr); //adresse "any" ???
+	/**direct_bdaddr (bluez) - peer_address (core specs)**/
+	str2ba("80:81:82:83:84:85", &bdaddr); //ça a marché au moins une fois, mais pas sûr que ce soit ça 
 	bacpy(&param_cp.direct_bdaddr, &bdaddr); 
-	param_cp.chan_map = 7; //00000111b - 1 octet - 00000111 to int --> 7	
-	param_cp.filter = 0x03; //0x03: whitelist only
+	param_cp.chan_map = 0x07; //00000111b - 1 octet - 00000111 to int --> 7	
+	param_cp.filter = 0x00;
 	
 	memset(&rq, 0, sizeof(rq));
 	rq.ogf = OGF_LE_CTL;
@@ -117,17 +117,21 @@ int main()
 	dd = hci_open_dev(0);
 	
 	/**Whitelist**/
-	str2ba("B8:27:EB:A4:33:13", &bdaddr); //adresse du zero
-	err = hci_le_add_white_list(dd, &bdaddr, bdaddr_type, 1000);
-	fprintf(stderr, "Retour de add_white_list = %i\n", err);
-		
-	/**Ma custom Set Adv Param définie plus haut**/
-	err = vvnx_hci_le_set_adv_parameters(dd);
-	fprintf(stderr, "Retour de set_adv_parameters = %i\n", err);
+	//str2ba("B8:27:EB:A4:33:13", &bdaddr); //adresse du zero
+	//err = hci_le_add_white_list(dd, &bdaddr, bdaddr_type, 1000);
+	//fprintf(stderr, "Retour de add_white_list = %i\n", err);
+	
+	/**Adv Disable, sinon erreur au set adv parameters: disallowed**/
+	err = hci_le_set_advertise_enable(dd, 0x00, 10000); 
+	fprintf(stderr, "Retour de set_advertise_disable 0x00 (disable) = %i\n", err); 	
 	
 	/**Ma custom Set Adv Data définie plus haut**/
 	err = vvnx_hci_le_set_adv_data(dd);
-	fprintf(stderr, "Retour de set_adv_data = %i\n", err);
+	fprintf(stderr, "Retour de set_adv_data = %i\n", err);	
+	
+	/**Ma custom Set Adv Param définie plus haut**/
+	err = vvnx_hci_le_set_adv_parameters(dd);
+	fprintf(stderr, "Retour de set_adv_parameters = %i\n", err);
 	
 	/**Adv Enable**/
 	err = hci_le_set_advertise_enable(dd, 0x01, 10000); //core specs p 1259
