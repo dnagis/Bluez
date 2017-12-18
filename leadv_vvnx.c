@@ -33,10 +33,11 @@ int vvnx_hci_le_set_adv_data(int dd)
 	le_set_advertising_data_cp adv_cp;
 	uint8_t status, taille;
 	taille = 7;
+	uint8_t adv_data_vvnx[31] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 	
 	memset(&adv_cp, 0, sizeof(adv_cp));
 	adv_cp.length = taille;
-	adv_cp.data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+	memcpy(adv_cp.data, adv_data_vvnx, taille); 
 	
 	memset(&rq, 0, sizeof(rq));
 	rq.ogf = OGF_LE_CTL;
@@ -50,7 +51,7 @@ int vvnx_hci_le_set_adv_data(int dd)
 		return -1;
 		
 	if (status) {
-	errno = EIO;
+	fprintf(stderr, "On a du return parameter va falloir lire status\n");
 	return -1;
 	}
 
@@ -63,7 +64,7 @@ int vvnx_hci_le_set_adv_data(int dd)
 
 int main()
 {
-	int dd;
+	int err, dd;
 		
 	dd = hci_open_dev(0);
 	
@@ -73,6 +74,10 @@ int main()
 	/**Ma custom Set Adv Data (because bluez définit les cmds params mais ne fournit pas de fonction)**/
 	err = vvnx_hci_le_set_adv_data(dd);
 	fprintf(stderr, "Retour de set_adv_data = %i\n", err);
+	
+	/**Adv Enable**/
+	err = hci_le_set_advertise_enable(dd, 0x01, 10000); //core specs p 1259
+	fprintf(stderr, "Retour de set_advertise_enable 0x01 (enable) = %i\n", err);
 	
 	
 	sleep(5);
