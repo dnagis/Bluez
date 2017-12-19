@@ -157,7 +157,9 @@ int main()
 	//err = hci_le_add_white_list(dd, &bdaddr, bdaddr_type, 1000);
 	//fprintf(stderr, "Retour de add_white_list = %i\n", err);
 	
-	/**Adv Disable, sinon erreur au set adv parameters: disallowed 0x0c**/
+	/**Adv Disable, sinon erreur au set adv parameters: disallowed 0x0c
+	 * Si l'adv est pas enabled tu auras de l'erreur, mais who cares...	 * 
+	 * **/
 	err = hci_le_set_advertise_enable(dd, 0x00, 10000); 
 	fprintf(stderr, "Retour de set_advertise_disable 0x00 (disable) = %i\n", err); 	
 	
