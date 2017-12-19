@@ -19,7 +19,44 @@
 #include "lib/hci_lib.h"
 
 
-/**SET ADVERTTISING DATA
+/**SET SCAN RESPONSE
+ * 
+ * la commande n'existe pas dans la librairie bluez, je suis donc obligé de faire ma request à la mano
+ * 
+ * **/
+ int vvnx_hci_le_set_scan_resp(int dd)
+{
+	struct hci_request rq;
+	le_set_scan_response_data_cp rsp_cp;
+	uint8_t status, taille;
+	taille = 8;
+	uint8_t scan_resp_vvnx[31] = {0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee};
+	
+	memset(&rsp_cp, 0, sizeof(rsp_cp));
+	rsp_cp.length = taille;
+	memcpy(rsp_cp.data, scan_resp_vvnx, taille); 
+	
+	memset(&rq, 0, sizeof(rq));
+	rq.ogf = OGF_LE_CTL;
+	rq.ocf = OCF_LE_SET_SCAN_RESPONSE_DATA;
+	rq.cparam = &rsp_cp;
+	rq.clen = LE_SET_SCAN_RESPONSE_DATA_CP_SIZE;
+	rq.rparam = &status;
+	rq.rlen = 1;
+	
+	if (hci_send_req(dd, &rq, 10000) < 0) //dernier argument = timeout
+		return -1;
+		
+	if (status) {
+	fprintf(stderr, "set_scan_resp -> On a du return parameter va falloir lire status\n");
+	return -1;
+	}
+
+	return 0;
+}
+ 
+
+/**SET ADVERTISING DATA
  * 
  * la commande n'existe pas dans la librairie bluez, je suis donc obligé de faire ma request à la mano
  * Core Sys Pkg [BR/EDR Ctrller Vol] Spec Vol. 2 > E-HCI func specs > 7-HCI cmds&evts > LE ctrlr cmds > p 1256 LE Set Advertising Data Command
@@ -58,7 +95,6 @@ int vvnx_hci_le_set_adv_data(int dd)
 	}
 
 	return 0;
-	
 }
 
 /**SET ADVERTISING PARAMETERS
@@ -121,13 +157,17 @@ int main()
 	//err = hci_le_add_white_list(dd, &bdaddr, bdaddr_type, 1000);
 	//fprintf(stderr, "Retour de add_white_list = %i\n", err);
 	
-	/**Adv Disable, sinon erreur au set adv parameters: disallowed**/
+	/**Adv Disable, sinon erreur au set adv parameters: disallowed 0x0c**/
 	err = hci_le_set_advertise_enable(dd, 0x00, 10000); 
 	fprintf(stderr, "Retour de set_advertise_disable 0x00 (disable) = %i\n", err); 	
 	
 	/**Ma custom Set Adv Data définie plus haut. Je pense pas qu'il soit nécessaire de disabler l'advertise pour que ça marche**/
 	err = vvnx_hci_le_set_adv_data(dd);
 	fprintf(stderr, "Retour de set_adv_data = %i\n", err);	
+	
+	/**Ma custom Set scan Resp définie plus haut.**/
+	err = vvnx_hci_le_set_scan_resp(dd);
+	fprintf(stderr, "Retour de set_scan_resp = %i\n", err);	
 	
 	/**Ma custom Set Adv Param définie plus haut**/
 	err = vvnx_hci_le_set_adv_parameters(dd);
