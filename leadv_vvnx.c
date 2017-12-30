@@ -29,8 +29,9 @@
 	struct hci_request rq;
 	le_set_scan_response_data_cp rsp_cp;
 	uint8_t status, taille;
-	taille = 8;
-	uint8_t scan_resp_vvnx[31] = {0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee};
+	taille = 16;
+	uint8_t scan_resp_vvnx[31] = {0x0f, 0x09, 0x45, 0x53, 0x50, 0x5f, 0x47, 0x41, 0x54, 0x54, 0x53, 0x5f, 0x44,
+        0x45, 0x4d, 0x4f};
 	
 	memset(&rsp_cp, 0, sizeof(rsp_cp));
 	rsp_cp.length = taille;
@@ -119,8 +120,8 @@ int vvnx_hci_le_set_adv_parameters(int dd)
 	param_cp.own_bdaddr_type = 0x00;
 	param_cp.direct_bdaddr_type = 0x00; //Peer Address Type
 	/**direct_bdaddr (bluez) - peer_address (core specs)**/
-	str2ba("80:81:82:83:84:85", &bdaddr); //ça a marché au moins une fois, mais pas sûr que ce soit ça 
-	bacpy(&param_cp.direct_bdaddr, &bdaddr); 
+	//str2ba("80:81:82:83:84:85", &bdaddr); //ça a marché au moins une fois, mais pas sûr que ce soit ça 
+	//bacpy(&param_cp.direct_bdaddr, &bdaddr); 
 	param_cp.chan_map = 0x07; //00000111b - 1 octet - 00000111 to int --> 7	
 	param_cp.filter = 0x00;
 	
