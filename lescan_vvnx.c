@@ -162,14 +162,14 @@ int main()
 	uint16_t window = htobs(0x0010); //durée du scan. doit être <= à interval. 10=default
 	
 	//LE Set Scan Enable Command. Core Specs p 1264. Vol. 2 Part E. HCI Func Specs
-	uint8_t filter_dup = 0x01; //1-filter duplicates enabled 0-Disabled
+	uint8_t filter_dup = 0x00; //1-filter duplicates enabled 0-Disabled
 		
 	//Ouverture d'un socket file descriptor vers le controller. Hard Codé "0" car c'est toujours hci0 chez moi.
 	dd = hci_open_dev(0); // lib/hci_lib.h
 	fprintf(stderr, "La valeur dd=%i\n", dd);
 	
 	/**Whitelist**/
-	str2ba("30:AE:A4:04:C3:5A", &bdaddr);
+	str2ba("30:AE:A4:04:C8:2E", &bdaddr);
 	err = hci_le_add_white_list(dd, &bdaddr, bdaddr_type, 1000);
 	fprintf(stderr, "Retour de add_white_list = %i\n", err);
 	
