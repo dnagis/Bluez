@@ -63,10 +63,10 @@ static float recup_temp(uint8_t *eir)
 {
 uint8_t intPart;
 uint8_t decPart;
-memcpy(&intPart, &eir[0], 1);
-memcpy(&decPart, &eir[1], 1);
-float temperature = intPart + (0.1 * decPart);
-//fprintf(stderr, "intpart = %i, decPart = %i, temperature = %.1f \n", intPart, decPart, temperature);
+memcpy(&intPart, &eir[5], 1);
+memcpy(&decPart, &eir[6], 1);
+float temperature = intPart + (0.01 * decPart);
+fprintf(stderr, "intpart = %i, decPart = %i, temperature = %.2f \n", intPart, decPart, temperature);
 return temperature;
 }
 
@@ -135,7 +135,7 @@ void run_lescan(int dd)
 			memset(&temp, 0, sizeof(temp));
 			ba2str(&info->bdaddr, addr);		
 			temp = recup_temp(info->data);
-			printf("retour de parse_vvnx: %.1f\n", temp);	
+			printf("bdaddr = %s et retour de parse_vvnx: %.2f\n", addr, temp);	
 
 		}
 
@@ -157,19 +157,20 @@ int main()
 	//LE Set Scan Parameters Command. Core Specs p 1261. Vol. 2 Part E. HCI Func Specs
 	uint8_t own_type = 0x00; // lib/hci.h (public 0x00 random 0x01)
 	uint8_t scan_type = 0x01; //0:Passive 1:Active
-	uint8_t filter_policy = 0x01; //p 1267. 0: tout accepter, 1:WL only, 2:Neg-Filter les directed adv non ciblés vers nous, 3:filtre 1+2 (?)
+	uint8_t filter_policy = 0x00; //p 1267. 0: tout accepter, 1:WL only, 2:Neg-Filter les directed adv non ciblés vers nous, 3:filtre 1+2 (?)
 	uint16_t interval = htobs(0x0010); //10=default, 10ms
 	uint16_t window = htobs(0x0010); //durée du scan. doit être <= à interval. 10=default
 	
 	//LE Set Scan Enable Command. Core Specs p 1264. Vol. 2 Part E. HCI Func Specs
-	uint8_t filter_dup = 0x00; //1-filter duplicates enabled 0-Disabled
+	uint8_t filter_dup = 0x01; //1-filter duplicates enabled 0-Disabled
 		
 	//Ouverture d'un socket file descriptor vers le controller. Hard Codé "0" car c'est toujours hci0 chez moi.
 	dd = hci_open_dev(0); // lib/hci_lib.h
 	fprintf(stderr, "La valeur dd=%i\n", dd);
 	
 	/**Whitelist**/
-	str2ba("30:AE:A4:04:C8:2E", &bdaddr);
+	//str2ba("30:AE:A4:04:C3:5A", &bdaddr);
+	str2ba("18:F0:E4:11:EF:B9", &bdaddr);
 	err = hci_le_add_white_list(dd, &bdaddr, bdaddr_type, 1000);
 	fprintf(stderr, "Retour de add_white_list = %i\n", err);
 	
