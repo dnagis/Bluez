@@ -1,4 +1,8 @@
-/** gcc -o lescan lescan_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.47 -lbluetooth
+/** gcc -o lescan lescan_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.45 -lbluetooth -lpthread
+ * 
+ * rpi:
+ * export PATH=/initrd/mnt/dev_save/cross/bin:$PATH
+ * arm-linux-gnueabihf-gcc -o lescan_rpi lescan_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.45 -lbluetooth -lpthread
  * 
  * sur github, repo ble_pure
  * 
@@ -29,6 +33,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <signal.h>
+#include <pthread.h>
 
 #include "lib/bluetooth.h"
 #include "lib/hci.h"
@@ -46,6 +51,26 @@ static volatile int signal_received = 0;
 #define EIR_NAME_COMPLETE           0x09  /* complete local name */
 #define EIR_TX_POWER                0x0A  /* transmit power level */
 #define EIR_DEVICE_ID               0x10  /* device ID */
+
+int timeout = 10; //auto shutdown, en secondes
+int ret_dsbl;
+int dd;
+
+
+/**Pour ne pas scanner indéfiniment**/
+void *thread_timeout(void *arg)
+{
+    fprintf(stderr, "Lancement du timeout on va dormir %i secondes\n", timeout);
+    sleep(timeout);
+    //maintenance obligatoire, sinon controller pas content et fail à toutes commandes hci ultérieures
+	ret_dsbl = hci_le_set_scan_enable(dd, 0x00, 0x01, 2000); //attention des fois pas de retour et bloque ici: à tester +++
+	fprintf(stderr, "Retour de set_scan_enable 0x00 (disable) = %i\n", ret_dsbl); //j'ai parfois -1 mais c'est pas grave, quand répétition trop rapide?	
+	hci_close_dev(dd);
+	
+	exit(0);
+}
+
+
 
 void sigint_handler(int sig)
 {
@@ -106,6 +131,7 @@ void run_lescan(int dd)
 	sigaction(SIGINT, &sa, NULL);
 	
 	while (1) {
+
 		evt_le_meta_event *meta; //lib/hci.h
 		le_advertising_info *info; //lib/hci.h
 		char addr[18];
@@ -136,7 +162,7 @@ void run_lescan(int dd)
 			ba2str(&info->bdaddr, addr);		
 			temp = recup_temp(info->data);
 			printf("bdaddr = %s et retour de parse_vvnx: %.2f\n", addr, temp);	
-
+			goto done; //c'est bon on l'a ciao
 		}
 
 	    
@@ -150,17 +176,17 @@ done:
 
 int main()
 {
-	int err, opt, dd;
+	int err, opt;
 	uint8_t bdaddr_type = LE_PUBLIC_ADDRESS;
 	bdaddr_t bdaddr;
+	pthread_t thread_to;
 	
 	//LE Set Scan Parameters Command. Core Specs p 1261. Vol. 2 Part E. HCI Func Specs
 	uint8_t own_type = 0x00; // lib/hci.h (public 0x00 random 0x01)
 	uint8_t scan_type = 0x01; //0:Passive 1:Active
-	uint8_t filter_policy = 0x00; //p 1267. 0: tout accepter, 1:WL only, 2:Neg-Filter les directed adv non ciblés vers nous, 3:filtre 1+2 (?)
+	uint8_t filter_policy = 0x01; //p 1267. 0: tout accepter, 1:WL only, 2:Neg-Filter les directed adv non ciblés vers nous, 3:filtre 1+2 (?)
 	uint16_t interval = htobs(0x0010); //10=default, 10ms
 	uint16_t window = htobs(0x0010); //durée du scan. doit être <= à interval. 10=default
-	
 	//LE Set Scan Enable Command. Core Specs p 1264. Vol. 2 Part E. HCI Func Specs
 	uint8_t filter_dup = 0x01; //1-filter duplicates enabled 0-Disabled
 		
@@ -168,9 +194,9 @@ int main()
 	dd = hci_open_dev(0); // lib/hci_lib.h
 	fprintf(stderr, "La valeur dd=%i\n", dd);
 	
-	/**Whitelist**/
-	//str2ba("30:AE:A4:04:C3:5A", &bdaddr);
-	str2ba("18:F0:E4:11:EF:B9", &bdaddr);
+	/**Whitelist -- voir filter_policy -- attention la whitelist n'est pas cleared automagiquemennt à chaque runtime: hcitool lewlclr**/
+	str2ba("30:AE:A4:45:C8:86", &bdaddr);	
+	//str2ba("24:0A:C4:00:1F:78", &bdaddr);
 	err = hci_le_add_white_list(dd, &bdaddr, bdaddr_type, 1000);
 	fprintf(stderr, "Retour de add_white_list = %i\n", err);
 	
@@ -181,6 +207,14 @@ int main()
 	/**Scan Enable**/
 	err = hci_le_set_scan_enable(dd, 0x01, filter_dup, 10000); //arg2: 1=enable, dernier arg timeout pour hci_send_req()
 	fprintf(stderr, "Retour de set_scan_enable 0x01 (enable) = %i\n", err);
+	
+	
+	/**auto shutdown au bout de n secondes via le pote thread**/
+	if(pthread_create(&thread_to, NULL, thread_timeout, NULL) == -1) {
+	perror("pthread_create");
+	return EXIT_FAILURE;
+    }
+	
 	
 	run_lescan(dd);
 	
