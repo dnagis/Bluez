@@ -1,8 +1,8 @@
-/** gcc -o lescan lescan_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.45 -lbluetooth -lpthread
+/** gcc -o lescan lescan_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.45 -lbluetooth -lpthread -lsqlite3
  * 
  * rpi:
  * export PATH=/initrd/mnt/dev_save/cross/bin:$PATH
- * arm-linux-gnueabihf-gcc -o lescan_rpi lescan_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.45 -lbluetooth -lpthread
+ * arm-linux-gnueabihf-gcc -o lescan_rpi lescan_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.45 -lbluetooth -lpthread -lsqlite3
  * 
  * sur github, repo Bluez-BLE
  * 
@@ -36,6 +36,8 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <pthread.h>
+#include <time.h>
+#include <sqlite3.h>
 
 #include "lib/bluetooth.h"
 #include "lib/hci.h"
@@ -99,6 +101,46 @@ fprintf(stderr, "intpart = %i, decPart = %i, temperature = %.2f \n", intPart, de
 return temperature;
 }
 
+void write_bdd(float temp, char *mac)
+{
+	//CREATE TABLE logtemp (epoch INT, mac TEXT, temp INT, sent INT default 0);
+	//1549355401|1601|102573|1
+	//sqlite3 /var/log/homedata.db "select datetime(epoch, 'unixepoch','localtime'), mac, temp from logtemp;"
+	char time_as_string[20]; //pour réceptionner la conversion d'un int en string
+	char temp_as_string[20];
+	//int temp_int = (int)(temp * 100);
+	int rc;
+	sqlite3 *db;
+	
+	sprintf(time_as_string, "%i", (unsigned long)time(NULL)); //sprintf: printf dans une string au format désiré printf - like
+	sprintf(temp_as_string, "%i", (int)(temp * 100));
+
+	printf("on va écrire dans bdd en sqlite mac = %s temp= %s epoch = %s\n", mac, temp_as_string, time_as_string);
+
+	//"insert into logtemp values(time_as_string, mac, temp_int);"
+	char stmt[80] = "";//attention si taille vide segfault au runtime
+	char debut_stmt[] = "insert into logtemp values(";
+	strcpy(stmt, debut_stmt);
+	strcat(stmt, time_as_string);
+	
+	strcat(stmt, ", \'");	
+	//strcat(stmt, "abcdef");
+	strcat(stmt, mac);
+	strcat(stmt, "\', ");
+	strcat(stmt, temp_as_string);	
+	char fin_stmt[] = ", 0);";
+	strcat(stmt, fin_stmt);	
+	
+	//printf("commande en string = %s\n", stmt);		
+	
+	rc = sqlite3_open("/var/log/homedata.db", &db);
+	rc = sqlite3_exec(db, stmt, NULL, 0, NULL); 
+	
+	//printf("retour commande sqlite = %i\n", rc);		
+	
+	sqlite3_close(db);
+	
+}
 
 
 
@@ -164,9 +206,10 @@ void run_lescan(int dd)
 			nb_capteurs_lu ++; //wl only et filter duplicates: on passe une fois pour chaque capteur
 			float temp;
 			memset(&temp, 0, sizeof(temp));
-			ba2str(&info->bdaddr, addr);		
+			ba2str(&info->bdaddr, addr);
 			temp = recup_temp(info->data);
 			printf("bdaddr = %s et retour de parse_vvnx: %.2f\n", addr, temp);	
+			write_bdd(temp, addr);
 			if ( nb_capteurs_lu == nb_total_capteurs ) goto done; //c'est on a tout ciao
 		}
    
