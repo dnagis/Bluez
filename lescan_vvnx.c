@@ -97,7 +97,7 @@ uint8_t decPart;
 memcpy(&intPart, &eir[5], 1);
 memcpy(&decPart, &eir[6], 1);
 float temperature = intPart + (0.01 * decPart);
-fprintf(stderr, "intpart = %i, decPart = %i, temperature = %.2f \n", intPart, decPart, temperature);
+//fprintf(stderr, "intpart = %i, decPart = %i, temperature = %.2f \n", intPart, decPart, temperature);
 return temperature;
 }
 
@@ -115,7 +115,7 @@ void write_bdd(float temp, char *mac)
 	sprintf(time_as_string, "%i", (unsigned long)time(NULL)); //sprintf: printf dans une string au format désiré printf - like
 	sprintf(temp_as_string, "%i", (int)(temp * 100));
 
-	printf("on va écrire dans bdd en sqlite mac = %s temp= %s epoch = %s\n", mac, temp_as_string, time_as_string);
+	//printf("on va écrire dans bdd en sqlite mac = %s temp= %s epoch = %s\n", mac, temp_as_string, time_as_string);
 
 	//"insert into logtemp values(time_as_string, mac, temp_int);"
 	char stmt[80] = "";//attention si taille vide segfault au runtime
@@ -153,7 +153,7 @@ void run_lescan(int dd)
 	int len;
 	//inspiration: hcitool lescan -> print_advertising_devices()
 	//btmon is your friend
-	fprintf(stderr, "On est dans run_lescan()...\n");
+	//fprintf(stderr, "On est dans run_lescan()...\n");
 	
 	/**Préparation du Socket**/
 	olen = sizeof(of);
@@ -202,7 +202,8 @@ void run_lescan(int dd)
 			
 		info = (le_advertising_info *) (meta->data + 1);
 			
-		if (info->evt_type == 0x04) {			//Filtrer par Event Type (SCAN_RSP ou ADV_IND...). btmon... Core Specs p. 1193 LE Advertising Report Event
+		if (info->evt_type == 0x00) {			//Filtrer par Event Type (SCAN_RSP ou ADV_IND...). btmon... Core Specs p. 1193 LE Advertising Report Event
+			//si je filtre par evt_type == 0x04 ça marche sur le NUC mais sur le rpi j'ai de la data sticky, c'est à dire qu'au deuxième capteur j'ai les mêmes infos.
 			nb_capteurs_lu ++; //wl only et filter duplicates: on passe une fois pour chaque capteur
 			float temp;
 			memset(&temp, 0, sizeof(temp));
@@ -212,7 +213,7 @@ void run_lescan(int dd)
 			write_bdd(temp, addr);
 			if ( nb_capteurs_lu == nb_total_capteurs ) goto done; //c'est on a tout ciao
 		}
-   
+
 	sleep(1);
 	}
 	
