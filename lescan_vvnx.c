@@ -4,7 +4,9 @@
  * export PATH=/initrd/mnt/dev_save/cross/bin:$PATH
  * arm-linux-gnueabihf-gcc -o lescan_rpi lescan_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.45 -lbluetooth -lpthread
  * 
- * sur github, repo ble_pure
+ * sur github, repo Bluez-BLE
+ * 
+ * Gestion de plusieurs capteurs: arrêt quand tout lu, repose sur la whitelist et le filter duplicates qui n'autorise qu'un retour par bdaddr
  * 
  * de l'autre côté, esp32, "esp32_ble_pure" sur github, et sur le NUC: esp32_vince/ble_pure
  * 
@@ -196,7 +198,7 @@ int main()
 	dd = hci_open_dev(0); // lib/hci_lib.h
 	fprintf(stderr, "La valeur dd=%i\n", dd);
 	
-	/**Whitelist -- voir scan param filter_policy -- attention la whitelist n'est pas cleared automagiquemennt à chaque runtime: hcitool lewlclr**/
+	/**Whitelist -- voir scan param filter_policy -- je cleare la whitelist à chaque passage (i.e. hcitool lewlclr) pour ne pas avoir d'embrouille**/
 	err = hci_le_clear_white_list(dd, 10000);
 	fprintf(stderr, "Retour de clear_white_list = %i\n", err);
 	str2ba("30:AE:A4:45:C8:86", &bdaddr); 
