@@ -52,15 +52,17 @@ static volatile int signal_received = 0;
 #define EIR_TX_POWER                0x0A  /* transmit power level */
 #define EIR_DEVICE_ID               0x10  /* device ID */
 
-int timeout = 10; //auto shutdown, en secondes
+int timeout = 20; //auto shutdown timeout, en secondes
 int ret_dsbl;
 int dd;
+int nb_capteurs_lu = 0;
+int nb_total_capteurs = 2;
 
 
-/**Pour ne pas scanner indéfiniment**/
+/**Pour ne pas scanner indéfiniment si n capteur(s) pas lu**/
 void *thread_timeout(void *arg)
 {
-    fprintf(stderr, "Lancement du timeout on va dormir %i secondes\n", timeout);
+    fprintf(stderr, "Lancement du timeout on va laisser %i secondes au scan avant shutdown\n", timeout);
     sleep(timeout);
     //maintenance obligatoire, sinon controller pas content et fail à toutes commandes hci ultérieures
 	ret_dsbl = hci_le_set_scan_enable(dd, 0x00, 0x01, 2000); //attention des fois pas de retour et bloque ici: à tester +++
@@ -157,15 +159,15 @@ void run_lescan(int dd)
 		info = (le_advertising_info *) (meta->data + 1);
 			
 		if (info->evt_type == 0x04) {			//Filtrer par Event Type (SCAN_RSP ou ADV_IND...). btmon... Core Specs p. 1193 LE Advertising Report Event
+			nb_capteurs_lu ++; //wl only et filter duplicates: on passe une fois pour chaque capteur
 			float temp;
 			memset(&temp, 0, sizeof(temp));
 			ba2str(&info->bdaddr, addr);		
 			temp = recup_temp(info->data);
 			printf("bdaddr = %s et retour de parse_vvnx: %.2f\n", addr, temp);	
-			goto done; //c'est bon on l'a ciao
+			if ( nb_capteurs_lu == nb_total_capteurs ) goto done; //c'est on a tout ciao
 		}
-
-	    
+   
 	sleep(1);
 	}
 	
@@ -194,11 +196,18 @@ int main()
 	dd = hci_open_dev(0); // lib/hci_lib.h
 	fprintf(stderr, "La valeur dd=%i\n", dd);
 	
-	/**Whitelist -- voir filter_policy -- attention la whitelist n'est pas cleared automagiquemennt à chaque runtime: hcitool lewlclr**/
-	str2ba("30:AE:A4:45:C8:86", &bdaddr);	
-	//str2ba("24:0A:C4:00:1F:78", &bdaddr);
-	err = hci_le_add_white_list(dd, &bdaddr, bdaddr_type, 1000);
+	/**Whitelist -- voir scan param filter_policy -- attention la whitelist n'est pas cleared automagiquemennt à chaque runtime: hcitool lewlclr**/
+	err = hci_le_clear_white_list(dd, 10000);
+	fprintf(stderr, "Retour de clear_white_list = %i\n", err);
+	str2ba("30:AE:A4:45:C8:86", &bdaddr); 
+	err = hci_le_add_white_list(dd, &bdaddr, bdaddr_type, 1000); //i.e. hcitool lewladd 30:AE:A4:45:C8:86
 	fprintf(stderr, "Retour de add_white_list = %i\n", err);
+	str2ba("30:AE:A4:04:C3:5A", &bdaddr);
+	err = hci_le_add_white_list(dd, &bdaddr, bdaddr_type, 1000); //i.e. hcitool lewladd 30:AE:A4:04:C3:5A
+	fprintf(stderr, "Retour de add_white_list = %i\n", err);
+	//str2ba("24:0A:C4:00:1F:78", &bdaddr);
+	
+	
 	
 	/**Set Scan Params**/
 	err = hci_le_set_scan_parameters(dd, scan_type, interval, window, own_type, filter_policy, 10000); //dernier arg timeout pour hci_send_req()
@@ -209,7 +218,7 @@ int main()
 	fprintf(stderr, "Retour de set_scan_enable 0x01 (enable) = %i\n", err);
 	
 	
-	/**auto shutdown au bout de n secondes via le pote thread**/
+	//auto shutdown au bout de n secondes via le pote thread
 	if(pthread_create(&thread_to, NULL, thread_timeout, NULL) == -1) {
 	perror("pthread_create");
 	return EXIT_FAILURE;
