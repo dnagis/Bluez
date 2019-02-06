@@ -118,7 +118,11 @@ void write_bdd(float temp, char *mac)
 	//printf("on va écrire dans bdd en sqlite mac = %s temp= %s epoch = %s\n", mac, temp_as_string, time_as_string);
 
 	//"insert into logtemp values(time_as_string, mac, temp_int);"
-	char stmt[80] = "";//attention si taille vide segfault au runtime
+	
+	/**attention à la taille de char stmt[]: si vide segfault au runtime, et si taille trop petite sqlite3_exec retourne -1 sans explication
+	(je suppose parce qu'avec le pointeur tu vois la totalité inscrite en mémoire, quand tu printf %s, stmt, alors que la variable stmt passée à
+	sqlite3_exec, elle, a une longueur qui si trop courte tronque la fin de la commande.**/
+	char stmt[80] = "";
 	char debut_stmt[] = "insert into logtemp values(";
 	strcpy(stmt, debut_stmt);
 	strcat(stmt, time_as_string);
