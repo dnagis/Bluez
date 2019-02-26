@@ -1,4 +1,4 @@
-/** gcc -o leadv leadv_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.47 -lbluetooth 
+/** gcc -o leadv leadv_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.45 -lbluetooth 
  * 
  * voir lescan en premier. Celui ci c'est pour advertiser pour faire du scan rsp si possible
  * et passer des paramètres vers l'esp32
@@ -8,6 +8,10 @@
  * 			Core specs > Core Sys Pkg [BR/EDR Ctrller Vol] Spec Vol. 2 > Part E - HCI func specs > 7-HCI cmds + evts > LE ctrller commands > p 1259 LE Set Advertising Enable Command
  * 
  * btmon et hcitool lescan sur un autre bluez (un zero en ssh par exemple...)
+ * 
+ * rpi:
+ * export PATH=/initrd/mnt/dev_save/cross/bin:$PATH
+ * arm-linux-gnueabihf-gcc -o leadv_rpi leadv_vvnx.c -I/initrd/mnt/dev_save/packages/bluez-5.45 -lbluetooth
  * 
  * **/
 
@@ -64,6 +68,7 @@
  * 
  * cp = Command Parameter
  * rp = Return Parameter
+ * 
  * 
  * **/
 int vvnx_hci_le_set_adv_data(int dd)
