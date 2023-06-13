@@ -20,3 +20,6 @@ gst-launch-1.0 audiotestsrc ! sbcenc ! a2dpsink transport=/org/bluez/hci0/dev_00
 Commencer par accès dbus en python (ensuite en C puisque je peux le faire)
 Enregistrer le simple-endpoint
 Est ce que je peux voir si le device est connecté, répondre positivement à une demande de connexion? Lancer une connexion?
+
+
+ToDo next: accéder au dbus en s'inspirant de p2pwifi/wpa_supplicant/hello_loop.py
