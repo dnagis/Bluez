@@ -1,0 +1,22 @@
+# Point de départ: juin 2023, il est possible à partir de gstreamer d'avoir de l'audio en a2dp 
+
+Le processus:
+bluetoothd démarré avec /usr/libexec/bluetooth/bluetoothd -C -E -p a2dp,input & disown
+script bluez-5.66/test/simple-endpoint lancé, sans argument (par défaut: hci0 et sbcsrc)
+bluetoothctl --> connect 00:1B:66:F6:75:AD #le device a été found + paired préalablement
+à la connexion, j'ai un transport du type:
+/org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep1/fdN #le N incrémente à chaque nouvelle connexion)
+que je vois dans:
+-bluetoothctl
+-output de simple-endpoint
+-d-feet
+
+avec ce transport je peux entendre de l'audiotestsrc gstreamer avec:
+gst-launch-1.0 audiotestsrc ! sbcenc ! a2dpsink transport=/org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep1/fd4
+
+
+# Piste: en C avoir à la fois gstreamer et accès à dbus en espérant pouvoir passer à l'élément a2dpsink les infos nécessaires
+
+Commencer par accès dbus en python (ensuite en C puisque je peux le faire)
+Enregistrer le simple-endpoint
+Est ce que je peux voir si le device est connecté, répondre positivement à une demande de connexion? Lancer une connexion?
