@@ -15,11 +15,11 @@ avec ce transport je peux entendre de l'audiotestsrc gstreamer avec:
 gst-launch-1.0 audiotestsrc ! sbcenc ! a2dpsink transport=/org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep1/fd4
 
 
-# Piste: en C avoir à la fois gstreamer et accès à dbus en espérant pouvoir passer à l'élément a2dpsink les infos nécessaires
+# Piste: en C avoir à la fois gstreamer et accès à dbus en espérant pouvoir passer à l'élément a2dpsink les infos nécessaires (le fd...)
 
-Commencer par accès dbus en python (ensuite en C puisque je peux le faire)
-Enregistrer le simple-endpoint
-Est ce que je peux voir si le device est connecté, répondre positivement à une demande de connexion? Lancer une connexion?
+--> Avoir en python simple endpoint plus simple, il sera lancé en "daemon"
+	--> dans le dir Bluez/dbus/
+--> Trouver l'objet à passer à gstreamer pour que l'élément a2dpsink fonctionne (ce que gst prend comme option "transport"), en python, puis en C
+--> gst en C, en donnant à a2dpsink l'option qui correspond à "transport" (i.e. l'objet qui termine en fdN)
 
 
-ToDo next: accéder au dbus en s'inspirant de p2pwifi/wpa_supplicant/hello_loop.py
