@@ -1,25 +1,49 @@
-# Point de départ: juin 2023, il est possible à partir de gstreamer d'avoir de l'audio en a2dp 
+## Point de départ: juin 2023, il est possible de diffuser du son de gstreamer vers un device bluetooth
 
-Le processus:
+# Le mécanisme:
 bluetoothd démarré avec /usr/libexec/bluetooth/bluetoothd -C -E -p a2dp,input & disown
 script bluez-5.66/test/simple-endpoint lancé, sans argument (par défaut: hci0 et sbcsrc)
-bluetoothctl --> connect 00:1B:66:F6:75:AD #le device a été found + paired préalablement
+bluetoothctl --> connect 00:1B:66:F6:75:AD #le device a été scan found + paired préalablement
 à la connexion, j'ai un transport du type:
 /org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep1/fdN #le N incrémente à chaque nouvelle connexion)
-que je vois dans:
+je vois cet object path dans:
 -bluetoothctl
 -output de simple-endpoint
 -d-feet
 
 avec ce transport je peux entendre de l'audiotestsrc gstreamer avec:
 gst-launch-1.0 audiotestsrc ! sbcenc ! a2dpsink transport=/org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep1/fd4
+gst-launch-1.0 audiotestsrc ! sbcenc ! a2dpsink transport=`bluetoothctl transport.list | cut -d ' ' -f 2`
+
+# Pistes: 
+-simplifier le processus d'apparaige: en script
+-pouvoir passer à l'élément a2dpsink les infos nécessaires (le fd...)
+
+--> Obtenir l'objet path à passer à gstreamer pour que l'élément a2dpsink fonctionne (ce que gst prend comme option "transport"), 
+en bash ???
+en C ???
+
+# Transport / Endpoint
+à la connexion du device j'ai qq chose comme:
+
+[NEW] Endpoint /org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep4 
+[NEW] Endpoint /org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep3 
+[NEW] Endpoint /org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep5 
+[NEW] Endpoint /org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep1 
+[NEW] Transport /org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep1/fd7
+
+bluetoothctl a un menu "transport"
+si je vais dans ce menu et que je fais list j'obtiens:
+Transport /org/bluez/hci0/dev_00_1B_66_F6_75_AD/sep1/fd7
+
+en bash (donc pas dans le shell bluetoothctl) je peux obtenir le même output avec:
+bluetoothctl transport.list
+pour avoir que l'object path:
+bluetoothctl transport.list | cut -d ' ' -f 2
+
+--> donc je peux obtenir en bash ce qu'il faut donner à a2dpsink!
 
 
-# Piste: en C avoir à la fois gstreamer et accès à dbus en espérant pouvoir passer à l'élément a2dpsink les infos nécessaires (le fd...)
 
---> Avoir en python simple endpoint plus simple, il sera lancé en "daemon"
-	--> dans le dir Bluez/dbus/
---> Trouver l'objet à passer à gstreamer pour que l'élément a2dpsink fonctionne (ce que gst prend comme option "transport"), en python, puis en C
---> gst en C, en donnant à a2dpsink l'option qui correspond à "transport" (i.e. l'objet qui termine en fdN)
 
 
